@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>letteredminds</title>
+  <title>Gửi Tâm Sự</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="wrap" aria-labelledby="pageTitle">
     <aside class="visual">
       <div class="logo">♡</div>
-      <h3 id="pageTitle">Soulmate Consciousness</h3>
+      <h3 id="pageTitle">Gửi Tâm Sự</h3>
       <p>Viết điều bạn muốn nói</p>
     </aside>
 
     <form id="confideForm" novalidate>
-      <!-- Thay endpoint của bạn tại đây -->
       <input type="hidden" id="FORM_ENDPOINT" value="https://formspree.io/f/mdkyorzy">
 
       <div style="position:absolute;left:-2000px;">
@@ -23,16 +22,28 @@
         <input id="hp" name="hp" autocomplete="off">
       </div>
 
-      <div class="row">
-        <div class="col">
-          <label for="name">Tên</label>
-          <input id="name" name="name" type="text">
-        </div>
-        <div class="col">
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email">
-        </div>
-      </div>
+<div class="chat-box chat-preview" id="chatBox">
+  <div class="chat-header">
+    CHAT BOX
+  </div>
+
+  <div class="chat-messages">
+    <div class="chat-message bot">
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <input
+  id="chatMessage"
+  placeholder="Trò chuyện bất cứ điều gì..."
+  autocomplete="off"
+/>
+    <button type="button" id="chatSendBtn" class="btn small">Gửi</button>
+  </div>
+</div>
+
+
+
 
       <div>
         <label for="message">Gửi điều muốn nói</label>
@@ -43,7 +54,6 @@
       <div class="actions">
         <label class="checkbox">
         </label>
-
         <button type="submit" class="btn">Gửi tâm sự</button>
         <button type="button" id="clearBtn" class="btn ghost small">Xóa</button>
       </div>
@@ -55,85 +65,80 @@
     </form>
   </main>
 
-  <script>
-    (function(){
-      const form = document.getElementById('confideForm');
-      const status = document.getElementById('statusArea');
-      const endpointInput = document.getElementById('FORM_ENDPOINT');
-      const clearBtn = document.getElementById('clearBtn');
-      const OWNER_EMAIL = 'legiathinh203707@gmail.com';
+<script>
+(function(){
+  const form = document.getElementById('confideForm');
+  const status = document.getElementById('statusArea');
+  const endpointInput = document.getElementById('FORM_ENDPOINT');
+  const clearBtn = document.getElementById('clearBtn');
 
-      function showMessage(text, isError){
-        status.innerHTML = '<div class="'+(isError? '':'success')+'">'+text+'</div>';
-      }
+  const messagesBox = document.querySelector('.chat-messages');
+  const chatInput = document.getElementById('chatMessage');
+  const chatSendBtn = document.getElementById('chatSendBtn');
 
-      clearBtn.addEventListener('click', ()=>{
+  // ===== CHAT UI =====
+  function addMessage(text, type){
+    if (!text) return;
+
+    const msg = document.createElement('div');
+    msg.className = 'chat-message ' + type;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+
+    msg.appendChild(bubble);
+    messagesBox.appendChild(msg);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  chatSendBtn.addEventListener('click', () => {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    addMessage(text, 'user');
+    chatInput.value = '';
+  });
+
+  // ===== CLEAR =====
+  clearBtn.addEventListener('click', ()=>{
+    form.reset();
+    status.innerHTML = '';
+  });
+
+  // ===== FORM SUBMIT =====
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const message = document.getElementById('message').value.trim();
+    const hp = document.getElementById('hp').value;
+    if (hp) return;
+
+    if (!message){
+      status.innerHTML = '<div class="success">Vui lòng nhập nội dung.</div>';
+      return;
+    }
+
+    const data = {
+      message,
+      sentAt: new Date().toISOString()
+    };
+
+    const endpoint = endpointInput.value;
+    if (!endpoint) return;
+
+    try{
+      const res = await fetch(endpoint,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify(data)
+      });
+      if(res.ok){
+        status.innerHTML = '<div class="success">Gửi thành công 💗</div>';
         form.reset();
-        status.innerHTML = '';
-      });
-
-      form.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        status.innerHTML = '';
-        const message = document.getElementById('message').value.trim();
-        const hp = document.getElementById('hp').value;
-        if (hp) return;
-        if (!message){
-          showMessage('Vui lòng nhập tin nhắn trước khi gửi.', true);
-          return;
-        }
-
-        const data = {
-          name: document.getElementById('name').value.trim(),
-          email: document.getElementById('email').value.trim(),
-          allowReply: document.getElementById('allowReply').checked ? 'yes' : 'no',
-          message: message,
-          sentAt: new Date().toISOString()
-        };
-
-        const endpoint = endpointInput.value && endpointInput.value !== 'YOUR_FORMSPREE_ENDPOINT'
-                          ? endpointInput.value.trim() : null;
-
-        if (endpoint){
-          try {
-            showMessage('Đang gửi...');
-            const res = await fetch(endpoint, {
-              method: 'POST',
-              headers: {'Content-Type':'application/json','Accept':'application/json'},
-              body: JSON.stringify(data)
-            });
-            if (res.ok){
-              showMessage('Gửi thành công — cảm ơn bạn!');
-              form.reset();
-            } else {
-              showMessage('Không gửi được. Mở mail client.', true);
-              openMailClientFallback(data);
-            }
-          } catch(err){
-            showMessage('Không thể kết nối form server. Mở mail client.', true);
-            openMailClientFallback(data);
-          }
-          return;
-        }
-        openMailClientFallback(data);
-      });
-
-      function openMailClientFallback(data){
-        const subject = encodeURIComponent('Tâm sự gửi tới bạn');
-        const body = encodeURIComponent(
-          `Tên: ${data.name || '(ẩn danh)'}\n` +
-          `Email: ${data.email || '(không cung cấp)'}\n` +
-          `Cho phép trả lời: ${data.allowReply}\n\n` +
-          `--- Tin nhắn ---\n${data.message}\n\nGửi lúc: ${data.sentAt}`
-        );
-        const mailto = `mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`;
-        window.location.href = mailto;
-        showMessage('Trình gửi mail sẽ được mở.', false);
       }
-    })();
-  </script>
-</body>
-</html>
+    }catch(err){}
+  });
 
-
-
+})();
+</script>
